@@ -16,10 +16,12 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.robtheis.aptr.translate;
+package com.rmtheis.aptr.translate;
 
-import com.robtheis.aptr.language.Language;
-import com.robtheis.aptr.ApertiumTranslatorAPI;
+import com.rmtheis.aptr.language.Language;
+import com.rmtheis.aptr.ApertiumTranslatorAPI;
+import com.rmtheis.aptr.ApiKeys;
+
 import java.net.URL;
 import java.net.URLEncoder;
 
@@ -32,7 +34,7 @@ public final class Translate extends ApertiumTranslatorAPI {
 
   private static final String RESPONSE_LABEL = "responseData";
   private static final String TRANSLATION_LABEL = "translatedText";
-  
+
   //prevent instantiation
   private Translate(){};
 
@@ -49,9 +51,9 @@ public final class Translate extends ApertiumTranslatorAPI {
     //Run the basic service validations first
     validateServiceState(text); 
     final String params = 
-      PARAM_API_KEY + URLEncoder.encode(apiKey,ENCODING) 
-      + PARAM_LANG_PAIR + URLEncoder.encode(from.toString(),ENCODING) + URLEncoder.encode("|",ENCODING) + URLEncoder.encode(to.toString(),ENCODING) 
-      + PARAM_TEXT + URLEncoder.encode(text,ENCODING);
+        PARAM_API_KEY + URLEncoder.encode(apiKey,ENCODING) 
+        + PARAM_LANG_PAIR + URLEncoder.encode(from.toString(),ENCODING) + URLEncoder.encode("|",ENCODING) + URLEncoder.encode(to.toString(),ENCODING) 
+        + PARAM_TEXT + URLEncoder.encode(text,ENCODING);
     final URL url = new URL(SERVICE_URL + params);
     final String response = retrieveSubObjString(url, RESPONSE_LABEL, TRANSLATION_LABEL);    
     return response.trim();
@@ -63,5 +65,16 @@ public final class Translate extends ApertiumTranslatorAPI {
       throw new RuntimeException("TEXT_TOO_LARGE");
     }
     validateServiceState();
+  }
+
+  public static void main(String[] args) {
+    try {
+      Translate.setKey(ApiKeys.APERTIUM_API_KEY);
+      String translation = Translate.execute("The quick brown fox jumps over the lazy dog.", Language.ENGLISH, Language.SPANISH);
+      System.out.println("Translation: " + translation);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
   }
 }
