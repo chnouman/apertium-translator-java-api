@@ -23,6 +23,8 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Iterator;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
@@ -87,40 +89,40 @@ public abstract class ApertiumTranslatorAPI {
     }
   }
 
-  /**
-   * Fetches the JSON response, parses the JSON Response, returns the result of the request as a String.
-   * 
-   * @param url The URL to query for a String response.
-   * @return The translated String.
-   * @throws Exception on error.
-   */
-  protected static String retrieveString(final URL url) throws Exception {
-    try {
-      final String response = retrieveResponse(url);      
-      return jsonToString(response);
-    } catch (Exception ex) {
-      throw new Exception("[apertium-translator-api] Error retrieving translation : " + ex.getMessage(), ex);
-    }
-  }
-
-  /**
-   * Fetches the JSON response, parses the JSON Response as an Array of JSONObjects,
-   * retrieves the String value of the specified JSON Property, and returns the result of 
-   * the request as a String Array.
-   * 
-   * @param url The URL to query for a String response.
-   * @param jsonProperty The JSON Property (key) for which we want a String Array
-   * @return The translated String[].
-   * @throws Exception on error.
-   */
-  protected static String[] retrieveStringArr(final URL url, final String jsonProperty) throws Exception {
-    try {
-      final String response = retrieveResponse(url);    
-      return jsonArrToStringArr(response,jsonProperty);
-    } catch (Exception ex) {
-      throw new Exception("[apertium-translator-api] Error retrieving translation.", ex);
-    }
-  }
+//  /**
+//   * Fetches the JSON response, parses the JSON Response, returns the result of the request as a String.
+//   * 
+//   * @param url The URL to query for a String response.
+//   * @return The translated String.
+//   * @throws Exception on error.
+//   */
+//  protected static String retrieveString(final URL url) throws Exception {
+//    try {
+//      final String response = retrieveResponse(url);      
+//      return jsonToString(response);
+//    } catch (Exception ex) {
+//      throw new Exception("[apertium-translator-api] Error retrieving translation : " + ex.getMessage(), ex);
+//    }
+//  }
+//
+//  /**
+//   * Fetches the JSON response, parses the JSON Response as an Array of JSONObjects,
+//   * retrieves the String value of the specified JSON Property, and returns the result of 
+//   * the request as a String Array.
+//   * 
+//   * @param url The URL to query for a String response.
+//   * @param jsonProperty The JSON Property (key) for which we want a String Array
+//   * @return The translated String[].
+//   * @throws Exception on error.
+//   */
+//  protected static String[] retrieveStringArr(final URL url, final String jsonProperty) throws Exception {
+//    try {
+//      final String response = retrieveResponse(url);    
+//      return jsonArrToStringArr(response,jsonProperty);
+//    } catch (Exception ex) {
+//      throw new Exception("[apertium-translator-api] Error retrieving translation.", ex);
+//    }
+//  }
 
   /**
    * Fetches the JSON response, parses the JSON Response an an Array of JSONObjects,
@@ -142,52 +144,87 @@ public abstract class ApertiumTranslatorAPI {
       throw new Exception("[apertium-translator-api] Error retrieving translation.", ex);
     }    
   }
-  
-  /**
-   * Fetches the JSON response, parses the JSON Response as an array of Strings
-   * and returns the result of the request as a String Array.
-   * 
-   * Overloaded to pass null as the JSON Property (assume only Strings instead of JSONObjects)
-   * 
-   * @param url The URL to query for a String response.
-   * @return The translated String[].
-   * @throws Exception on error.
-   */
-  protected static String[] retrieveStringArr(final URL url) throws Exception {
-    return retrieveStringArr(url,null);
-  }
 
   /**
-   * Fetches the JSON response, parses the JSON Response, returns the result of the request as an array of integers.
+   * Fetches the JSON response, parses the JSON Response an an Array of JSONObjects,
+   * parses the specified JSON Property as a JSON Array, and returns all the String 
+   * results for the value for the given JSON Property in the nested objects.
    * 
    * @param url The URL to query for a String response.
+   * @param jsonProperty The JSON Property (key) indicating the object we want to parse.
+   * @param jsonSubObjProperty The JSON Property, in the nested object, that we want the value of.
    * @return The translated String.
    * @throws Exception on error.
    */
-  protected static Integer[] retrieveIntArray(final URL url) throws Exception {
+  protected static String[] retrieveSubObjStringArr(final URL url, final String jsonProperty, final String jsonSubObjProperty) throws Exception {
     try {
-      final String response = retrieveResponse(url);    		
-      return jsonToIntArr(response);
+      final String response = retrieveResponse(url);
+      return jsonArrSubObjToString(response, jsonProperty, jsonSubObjProperty);
     } catch (Exception ex) {
-      throw new Exception("[apertium-translator-api] Error retrieving translation : " + ex.getMessage(), ex);
+      throw new Exception("[apertium-translator-api] Error retrieving translation.", ex);
+    }    
+  }
+  
+  // Helper method to parse a JSON object continaing a JSON array as the value for the given property 
+  private static String[] jsonArrSubObjToString(final String inputString, final String propertyName, final String subObjPropertyName) throws Exception {
+    JSONObject jsonObj = (JSONObject)JSONValue.parse(inputString);   
+    JSONArray jsonArr = (JSONArray)JSONValue.parse(jsonObj.get(propertyName).toString());
+    String[] translations = new String[jsonArr.size()];
+    Iterator<?> i = jsonArr.iterator();
+    int c = 0;
+    while (i.hasNext()) {
+      String t = jsonSubObjToString(i.next().toString(), propertyName, subObjPropertyName);
+      translations[c] = t;
+      c++;
     }
+    return translations;
   }
-
-  private static Integer[] jsonToIntArr(final String inputString) throws Exception {
-    final JSONArray jsonArr = (JSONArray)JSONValue.parse(inputString);
-    Integer[] intArr = new Integer[jsonArr.size()];
-    int i = 0;
-    for(Object obj : jsonArr) {
-      intArr[i] = ((Long)obj).intValue();
-      i++;
-    }
-    return intArr;
-  }
-
-  private static String jsonToString(final String inputString) throws Exception {
-    String json = (String)JSONValue.parse(inputString);
-    return json.toString();
-  }
+  
+//  /**
+//   * Fetches the JSON response, parses the JSON Response as an array of Strings
+//   * and returns the result of the request as a String Array.
+//   * 
+//   * Overloaded to pass null as the JSON Property (assume only Strings instead of JSONObjects)
+//   * 
+//   * @param url The URL to query for a String response.
+//   * @return The translated String[].
+//   * @throws Exception on error.
+//   */
+//  protected static String[] retrieveStringArr(final URL url) throws Exception {
+//    return retrieveStringArr(url,null);
+//  }
+//
+//  /**
+//   * Fetches the JSON response, parses the JSON Response, returns the result of the request as an array of integers.
+//   * 
+//   * @param url The URL to query for a String response.
+//   * @return The translated String.
+//   * @throws Exception on error.
+//   */
+//  protected static Integer[] retrieveIntArray(final URL url) throws Exception {
+//    try {
+//      final String response = retrieveResponse(url);    		
+//      return jsonToIntArr(response);
+//    } catch (Exception ex) {
+//      throw new Exception("[apertium-translator-api] Error retrieving translation : " + ex.getMessage(), ex);
+//    }
+//  }
+//
+//  private static Integer[] jsonToIntArr(final String inputString) throws Exception {
+//    final JSONArray jsonArr = (JSONArray)JSONValue.parse(inputString);
+//    Integer[] intArr = new Integer[jsonArr.size()];
+//    int i = 0;
+//    for(Object obj : jsonArr) {
+//      intArr[i] = ((Long)obj).intValue();
+//      i++;
+//    }
+//    return intArr;
+//  }
+//
+//  private static String jsonToString(final String inputString) throws Exception {
+//    String json = (String)JSONValue.parse(inputString);
+//    return json.toString();
+//  }
 
   // Helper method to parse a JSONObject with nested JSONObjects.
   // Retrieves the object with the given propertyName, then the value for the given propertyName within that object.
@@ -197,26 +234,26 @@ public abstract class ApertiumTranslatorAPI {
     return dataObj.get(subObjPropertyName).toString();
   }
   
-  // Helper method to parse a JSONArray. Reads an array of JSONObjects and returns a String Array
-  // containing the toString() of the desired property. If propertyName is null, just return the String value.
-  private static String[] jsonArrToStringArr(final String inputString, final String propertyName) throws Exception {
-    final JSONArray jsonArr = (JSONArray)JSONValue.parse(inputString);
-    String[] values = new String[jsonArr.size()];
-
-    int i = 0;
-    for(Object obj : jsonArr) {
-      if(propertyName!=null&&propertyName.length()!=0) {
-        final JSONObject json = (JSONObject)obj;
-        if(json.containsKey(propertyName)) {
-          values[i] = json.get(propertyName).toString();
-        }
-      } else {
-        values[i] = obj.toString();
-      }
-      i++;
-    }
-    return values;
-  }
+//  // Helper method to parse a JSONArray. Reads an array of JSONObjects and returns a String Array
+//  // containing the toString() of the desired property. If propertyName is null, just return the String value.
+//  private static String[] jsonArrToStringArr(final String inputString, final String propertyName) throws Exception {
+//    final JSONArray jsonArr = (JSONArray)JSONValue.parse(inputString);
+//    String[] values = new String[jsonArr.size()];
+//
+//    int i = 0;
+//    for(Object obj : jsonArr) {
+//      if(propertyName!=null&&propertyName.length()!=0) {
+//        final JSONObject json = (JSONObject)obj;
+//        if(json.containsKey(propertyName)) {
+//          values[i] = json.get(propertyName).toString();
+//        }
+//      } else {
+//        values[i] = obj.toString();
+//      }
+//      i++;
+//    }
+//    return values;
+//  }
 
   /**
    * Reads an InputStream and returns its contents as a String.
@@ -235,7 +272,7 @@ public abstract class ApertiumTranslatorAPI {
         while (null != (string = reader.readLine())) {
           // Need to strip the Unicode Zero-width Non-breaking Space. For some reason, the Microsoft AJAX
           // services prepend this to every response
-          outputBuilder.append(string.replaceAll("\uFEFF", ""));
+          outputBuilder.append(string.replaceAll("\uFEFF", "")); // TODO Is it safe to remove this?
         }
       }
     } catch (Exception ex) {
@@ -251,7 +288,7 @@ public abstract class ApertiumTranslatorAPI {
     }
   }
 
-  protected static String buildStringArrayParam(Object[] values) {
+  protected static String buildStringdArrayParam(Object[] values) {
     StringBuilder targetString = new StringBuilder("[\""); 
     String value;
     for(Object obj : values) {

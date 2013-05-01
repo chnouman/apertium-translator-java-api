@@ -51,7 +51,7 @@ public final class Translate extends ApertiumTranslatorAPI {
     //Run the basic service validations first
     validateServiceState(text); 
     final String params = 
-        PARAM_API_KEY + URLEncoder.encode(apiKey,ENCODING) 
+        (apiKey != null ? PARAM_API_KEY + URLEncoder.encode(apiKey,ENCODING) : "") 
         + PARAM_LANG_PAIR + URLEncoder.encode(from.toString(),ENCODING) + URLEncoder.encode("|",ENCODING) + URLEncoder.encode(to.toString(),ENCODING) 
         + PARAM_TEXT + URLEncoder.encode(text,ENCODING);
     final URL url = new URL(SERVICE_URL + params);
@@ -59,19 +59,74 @@ public final class Translate extends ApertiumTranslatorAPI {
     return response.trim();
   }
 
+  /**
+   * Translates an array of texts from a given Language to another given Language using Apertium.
+   * 
+   * Source/target language arrays must be the same size as the text array. 
+   * 
+   * @param texts The Strings Array to translate.
+   * @param from The language code to translate from.
+   * @param to The language code to translate to.
+   * @return The translated Strings Array[].
+   * @throws Exception on error.
+   */
+  public static String[] execute(final String[] texts, final Language[] from, final Language[] to) throws Exception {
+    //Run the basic service validations first
+    validateServiceState(texts);
+
+    if ((texts.length != from.length) || (texts.length != to.length)) {
+      throw new IllegalArgumentException("Source/target language array sizes do not match text array size.");
+    }
+
+    String params = apiKey != null ? PARAM_API_KEY + URLEncoder.encode(apiKey,ENCODING) : "";
+    for (int i = 0; i < texts.length; i++) {
+      params += PARAM_TEXT + URLEncoder.encode(texts[i],ENCODING)
+          + PARAM_LANG_PAIR + URLEncoder.encode(from[i].toString(),ENCODING) + URLEncoder.encode("|",ENCODING) + URLEncoder.encode(to[i].toString(),ENCODING);
+    }
+    final URL url = new URL(SERVICE_URL + params);
+    final String[] response = retrieveSubObjStringArr(url, RESPONSE_LABEL, TRANSLATION_LABEL);
+    return response;
+  }  
+
+  private static void validateServiceState(final String[] texts) throws Exception {
+    int length = 0;
+    for(String text : texts) {
+      length+=text.getBytes(ENCODING).length;
+    }
+    if(length>10240) {
+      throw new RuntimeException("TEXT_TOO_LARGE");
+    }
+    validateServiceState();
+  }
+
   private static void validateServiceState(final String text) throws Exception {
     final int byteLength = text.getBytes(ENCODING).length;
-    if(byteLength>10240) {
+    if(byteLength>10240) { // TODO What is the maximum text length allowable for Apertium?
       throw new RuntimeException("TEXT_TOO_LARGE");
     }
     validateServiceState();
   }
 
   public static void main(String[] args) {
+    // For testing, request a single translation
     try {
       Translate.setKey(ApiKeys.APERTIUM_API_KEY);
       String translation = Translate.execute("The quick brown fox jumps over the lazy dog.", Language.ENGLISH, Language.SPANISH);
       System.out.println("Translation: " + translation);
+    } catch (Exception e) {
+      // TODO Auto-generated catch block
+      e.printStackTrace();
+    }
+    
+    // For testing, request an array of translations
+    try {
+      Translate.setKey(ApiKeys.APERTIUM_API_KEY);      
+      String[] translations = Translate.execute(new String[] {"Hello", "The quick brown fox jumps over the lazy dog."}, 
+          new Language[] { /* Source languages */ Language.ENGLISH, Language.ENGLISH }, 
+          new Language[] { /* Target languages */ Language.SPANISH, Language.CATALAN } );
+      for (String translation : translations) {
+        System.out.println("Translation: " + translation);
+      }
     } catch (Exception e) {
       // TODO Auto-generated catch block
       e.printStackTrace();
